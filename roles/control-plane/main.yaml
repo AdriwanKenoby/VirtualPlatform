@@ -1,0 +1,33 @@
+---
+hosts: control-plane
+become: true
+
+pre_tasks:
+  - name: Ensure br_netfilter kernel module is loaded
+    ansible.builtin.modprobe:
+      name: br_netfilter
+      state: present
+
+  - name: Ensure net.bridge.bridge-nf-call-iptables is set to 1
+    ansible.builtin.sysctl:
+      name: item.key
+      value: item.value
+      state: present
+      reload: yes
+    loop: { 
+      'net.bridge.bridge-nf-call-ip6tables': 1,
+      'net.bridge.bridge-nf-call-iptables': 1
+    }
+
+  - name: sysctl persistent configuration
+    ansible.builtin.copy:  
+      src: k8s.conf
+      dest: /ets/sysctl.d/k8s.conf
+    
+tasks:
+  - name: Initialize Kubernetes control plane
+    command: kubeadm init --pod-network-cidr=
+
+post_tasks:
+  - name: Create .kube directory
+    file:

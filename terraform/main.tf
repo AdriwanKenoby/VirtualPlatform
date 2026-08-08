@@ -23,7 +23,7 @@ resource "libvirt_network" "virbr" {
 
 # 1) Volume de base (image cloud Ubuntu - copie locale)
 resource "libvirt_volume" "base" {
-  name   = "ubuntu-24.04-base.qcow2"
+  name   = var.base_image
   pool   = var.pool_name
 
   target = {
@@ -221,7 +221,7 @@ resource "ansible_host" "k8s-control-plane-1" {
   name     = "k8s-control-plane-1"
   groups   = [ansible_group.k8s_control_plane.name]
   variables = {
-    ansible_host                 = var.vms["k8s-control-plane-1"].ip
+    ansible_host                 = var.vms["control-plane-1"].ip
     ansible_user                 = "ubuntu"
     ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
     ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"
@@ -232,7 +232,7 @@ resource "ansible_host" "k8s-worker01" {
   name     = "k8s-worker01"
   groups   = [ansible_group.k8s_workers.name]
   variables = {
-    ansible_host                 = var.vms["k8s-worker01"].ip
+    ansible_host                 = var.vms["worker01"].ip
     ansible_user                 = "ubuntu"
     ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
     ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"
@@ -243,7 +243,7 @@ resource "ansible_host" "k8s-worker02" {
   name     = "k8s-worker02"
   groups   = [ansible_group.k8s_workers.name]
   variables = {
-    ansible_host                 = var.vms["k8s-worker02"].ip
+    ansible_host                 = var.vms["worker02"].ip
     ansible_user                 = "ubuntu"
     ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
     ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"

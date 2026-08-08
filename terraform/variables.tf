@@ -1,7 +1,7 @@
-variable "vm_name" {
-  description = "Nom de la VM"
+variable "vm_prefix" {
+  description = "Prefix pour le nom des VMs"
   type        = string
-  default     = "vm-k8s-01"
+  default     = "k8s"
 }
 
 variable "base_image_path" {
@@ -53,8 +53,14 @@ variable "vms" {
   }))
   
   default = {
-    "k8s-control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.100" },
-    "k8s-worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.101" },
-    "k8s-worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.102" }
+    "control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.100" },
+    "worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.101" },
+    "worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.102" }
   }
+}
+
+variable "base_image" {
+  description = "Nom de l'image de base"
+  type        = string
+  default     = "ubuntu-24.04-base.qcow2"
 }

@@ -24,7 +24,18 @@
       loop: 
         - {'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1}
         - {'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1}
-  
+
+    - name: Add CRI-O and Kubernetes GPG keys
+      ansible.builtin.deb822_repository:
+        name: k8s
+        types: deb
+        uris: "https://pkgs.k8s.io/"
+        suites: stable
+        components: 
+          - core
+        architectures: amd64
+        signed_by: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/Release.key"
+     
   tasks:
   
   post_tasks:

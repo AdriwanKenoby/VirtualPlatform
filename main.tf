@@ -210,11 +210,11 @@ resource "libvirt_domain" "vms" {
 ##--------------- Ansible -------------------
 
 resource "ansible_group" "k8s_control_plane" {
-  name = "k8s_control_plane"
+  name = "control-plane"
 }
 
 resource "ansible_group" "k8s_workers" {
-  name = "k8s_workers"
+  name = "workers"
 }
 
 resource "ansible_host" "k8s-control-plane-1" {

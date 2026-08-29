@@ -1,6 +1,9 @@
 variable "base_image" {
   description = "Chemin vers l'image cloud de base"
-  type        = map(string)
+  type        = object({
+    name = string
+    path = string
+  })
   
   default     = {
     name = "ubuntu-24.04-base.qcow2",
@@ -25,11 +28,19 @@ variable "network_info" {
   type = object({
     name = string
     address = string
+    ranges = object({
+      start = string
+      end = string
+    })
   })
 
   default     = {
     name = "virbr01"
     address = "192.168.100.0/24"
+    ranges = {
+      start = "192.168.100.100"
+      end = "192.168.100.102"
+    }
   }
 }
 
@@ -52,12 +63,18 @@ variable "vms" {
     memory = number
     vcpu   = number
     disk   = number
-    ip     = string
   }))
-  
+
+  validation {
+    condition = alltrue(
+      [for vm in keys(var.vms): can(regex("worker", vm)) || can(regex("control", vm))]
+    )
+    error_message = "The name of the VM must contains either worker or control"
+  }
+
   default = {
-    "control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.100/24" }
-    "worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.101/24" }
-    "worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.102/24"}
+    "control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32 }
+    "worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32 }
+    "worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32 }
   }
 }

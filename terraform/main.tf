@@ -7,14 +7,22 @@ resource "libvirt_network" "virbr" {
   autostart = true
   bridge   = {
     name = var.network_info.name
+    stp = "off"
+  }  
+  
+  forward = {
+    mode = "route"
+    dev = "enp4s0"
   }
-
 
   ips = [{
     address = cidrhost(var.network_info.address, 1)
     netmask = cidrnetmask(var.network_info.address)
-    dhcp    =  {
-      enabled = false
+    dhcp = {
+      ranges = [ {
+        start = var.network_info.ranges.start
+        end = var.network_info.ranges.end
+      } ]
     }
     family  = "ipv4"
   }]
@@ -82,7 +90,6 @@ resource "libvirt_cloudinit_disk" "init" {
   })
 
   network_config = templatefile("${path.module}/cloud-init/network-config.yaml", {
-    ip = var.vms["${each.key}"].ip
     gateway = var.network_info.address
   })
 }
@@ -190,6 +197,10 @@ resource "libvirt_domain" "vms" {
         source = {
           network = { network = libvirt_network.virbr.name }
         }
+        wait_for_ip = {
+          source = "lease"
+          timeout = 60
+        }
       }
     ]
     
@@ -232,6 +243,15 @@ resource "libvirt_domain" "vms" {
   running = true
 }
 
+# Data source pour récupérer les IPs via DHCP leases
+data "libvirt_domain_interface_addresses" "ips_addresses" {
+  for_each = var.vms
+  domain = libvirt_domain.vms["${each.key}"].name
+  source = "lease"  # Utilise le serveur DHCP de libvirt
+
+  depends_on = [libvirt_domain.vms]
+}
+
 ##--------------- Ansible -------------------
 
 resource "ansible_group" "k8s_control_plane" {
@@ -242,33 +262,12 @@ resource "ansible_group" "k8s_workers" {
   name = "workers"
 }
 
-resource "ansible_host" "k8s-control-plane-1" {
-  name     = "k8s-control-plane-1"
-  groups   = [ansible_group.k8s_control_plane.name]
+resource "ansible_host" "k8s" {
+  for_each = var.vms
+  name     = each.key
+  groups   = [try(regex("worker", each.key), []) == "worker" ? ansible_group.k8s_workers.name : ansible_group.k8s_control_plane.name]
   variables = {
-    ansible_host                 = split("/", var.vms["control-plane-1"].ip)[0]
-    ansible_user                 = "ubuntu"
-    ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
-    ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"
-  }
-}
-
-resource "ansible_host" "k8s-worker01" {
-  name     = "k8s-worker01"
-  groups   = [ansible_group.k8s_workers.name]
-  variables = {
-    ansible_host                 = split("/", var.vms["worker01"].ip)[0]
-    ansible_user                 = "ubuntu"
-    ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
-    ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"
-  }
-}
-
-resource "ansible_host" "k8s-worker02" {
-  name     = "k8s-worker02"
-  groups   = [ansible_group.k8s_workers.name]
-  variables = {
-    ansible_host                 = split("/", var.vms["worker02"].ip)[0]
+    ansible_host                 = data.libvirt_domain_interface_addresses.ips_addresses["${each.key}"].interfaces[0].addrs[0].addr
     ansible_user                 = "ubuntu"
     ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
     ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"

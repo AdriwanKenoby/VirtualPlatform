@@ -3,14 +3,13 @@ ethernets:
   default:
     match:
       driver: virtio*   # Match n'importe quelle interface virtio
-    dhcp4: false
+    dhcp4: false   
     dhcp6: false
     addresses:
-      - ${ip}/24
+      - ${ip}
     routes:
       - to: default
-        via: ${gateway}/24
+        via: ${gateway}
     nameservers:
       addresses:
         - 192.168.1.254
-        - 8.8.8.8

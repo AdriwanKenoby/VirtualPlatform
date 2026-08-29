@@ -1,13 +1,11 @@
-variable "vm_prefix" {
-  description = "Prefix pour le nom des VMs"
-  type        = string
-  default     = "k8s"
-}
-
-variable "base_image_path" {
+variable "base_image" {
   description = "Chemin vers l'image cloud de base"
-  type        = string
-  default     = "/var/lib/libvirt/images/base/ubuntu-24.04-server-cloudimg-amd64.img"
+  type        = map(string)
+  
+  default     = {
+    name = "ubuntu-24.04-base.qcow2",
+    path = "ubuntu-24.04-server-cloudimg-amd64.img"
+  }
 }
 
 variable "ssh_public_key_path" {
@@ -24,23 +22,28 @@ variable "ssh_private_key_path" {
 
 variable "network_info" {
   description = "Réseau libvirt"
-  type        = object({
+  type = object({
     name = string
     address = string
-    netmask = string
   })
 
   default     = {
     name = "virbr01"
-    address = "192.168.100.1"
-    netmask = "255.255.255.0"
+    address = "192.168.100.0/24"
   }
 }
 
-variable "pool_name" {
+variable "pool_storage_info" {
   description = "Nom du pool de stockage libvirt"
-  type        = string
-  default     = "VMs"
+  type = object({
+    name = string
+    path = string 
+  })
+
+  default     = {
+    name = "VMs"
+    path = "/var/lib/libvirt/images"
+  }
 }
 
 variable "vms" {
@@ -53,14 +56,8 @@ variable "vms" {
   }))
   
   default = {
-    "control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.100" },
-    "worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.101" },
-    "worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.102" }
+    "control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.100/24" }
+    "worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.101/24" }
+    "worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32, ip = "192.168.100.102/24"}
   }
-}
-
-variable "base_image" {
-  description = "Nom de l'image de base"
-  type        = string
-  default     = "ubuntu-24.04-base.qcow2"
 }

@@ -9,9 +9,10 @@ resource "libvirt_network" "virbr" {
     name = var.network_info.name
   }
 
+
   ips = [{
-    address = var.network_info.address
-    netmask = var.network_info.netmask
+    address = cidrhost(var.network_info.address, 1)
+    netmask = cidrnetmask(var.network_info.address)
     dhcp    =  {
       enabled = false
     }
@@ -19,12 +20,21 @@ resource "libvirt_network" "virbr" {
   }]
 }
 
-
+resource "libvirt_pool" "pool_storage" {
+  name = var.pool_storage_info.name
+  type = "dir"
+  target = {
+    path = var.pool_storage_info.path
+    permissions = {
+      mode = "0711"
+    }
+  }
+}
 
 # 1) Volume de base (image cloud Ubuntu - copie locale)
 resource "libvirt_volume" "base" {
-  name   = var.base_image
-  pool   = var.pool_name
+  name   = var.base_image.name
+  pool   = libvirt_pool.pool_storage.name
 
   target = {
     format = { type = "qcow2" }
@@ -32,7 +42,7 @@ resource "libvirt_volume" "base" {
 
   create = {
     content = {
-      url = var.base_image_path
+      url = "${path.module}/${var.base_image.path}"
     }
   }
 }
@@ -41,7 +51,7 @@ resource "libvirt_volume" "base" {
 resource "libvirt_volume" "os_disk" {
   for_each = var.vms
   name     = "${each.key}.qcow2"
-  pool     = var.pool_name
+  pool     = libvirt_pool.pool_storage.name
   capacity = "${each.value.disk}" * 1024 * 1024 * 1024  # Conversion en bytes
 
   target = {
@@ -62,7 +72,7 @@ resource "libvirt_cloudinit_disk" "init" {
 
   user_data = templatefile("${path.module}/cloud-init/user-data.yaml", {
     hostname   = "${each.key}"
-    public_key = file(pathexpand(var.ssh_public_key_path))
+    public_key = trimspace(file(pathexpand(var.ssh_public_key_path)))
   })
 
   # meta_data est OBLIGATOIRE en 0.9.x
@@ -81,7 +91,7 @@ resource "libvirt_cloudinit_disk" "init" {
 resource "libvirt_volume" "cloudinit" {
   for_each = var.vms
   name  = "${each.key}-cloudinit.iso"
-  pool = var.pool_name
+  pool = libvirt_pool.pool_storage.name
 
   create = {
     content = {
@@ -111,7 +121,7 @@ resource "libvirt_domain" "vms" {
   os = {
     type         = "hvm"
     type_machine = "q35"
-    firmware     = "efi"
+    firmware = "efi"
     # Désactive Secure Boot : libvirt 10+ enrôle par défaut les clés
     # Microsoft (OVMF_CODE_4M.ms.fd) qui rejettent les kernels non
     # signés MS. Les images cloud Linux démarrent puis se bloquent à
@@ -143,7 +153,7 @@ resource "libvirt_domain" "vms" {
         }
         source = {
           volume = {
-            pool   = var.pool_name
+            pool   = libvirt_pool.pool_storage.name
             volume = libvirt_volume.os_disk[each.key].name
           }
         }
@@ -161,7 +171,7 @@ resource "libvirt_domain" "vms" {
         }
         source = {
           volume = {
-            pool   = var.pool_name
+            pool   = libvirt_pool.pool_storage.name
             volume = libvirt_volume.cloudinit["${each.key}"].name
           }
         }
@@ -179,6 +189,21 @@ resource "libvirt_domain" "vms" {
         model = { type = "virtio" }
         source = {
           network = { network = libvirt_network.virbr.name }
+        }
+      }
+    ]
+    
+    channels = [
+      {
+        source = {
+          unix = {
+            mode = "bind"
+          }
+        }
+        target = {
+          virt_io = {
+            name  = "org.qemu.guest_agent.0"
+          }
         }
       }
     ]
@@ -221,7 +246,7 @@ resource "ansible_host" "k8s-control-plane-1" {
   name     = "k8s-control-plane-1"
   groups   = [ansible_group.k8s_control_plane.name]
   variables = {
-    ansible_host                 = var.vms["control-plane-1"].ip
+    ansible_host                 = split("/", var.vms["control-plane-1"].ip)[0]
     ansible_user                 = "ubuntu"
     ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
     ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"
@@ -232,7 +257,7 @@ resource "ansible_host" "k8s-worker01" {
   name     = "k8s-worker01"
   groups   = [ansible_group.k8s_workers.name]
   variables = {
-    ansible_host                 = var.vms["worker01"].ip
+    ansible_host                 = split("/", var.vms["worker01"].ip)[0]
     ansible_user                 = "ubuntu"
     ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
     ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"
@@ -243,10 +268,9 @@ resource "ansible_host" "k8s-worker02" {
   name     = "k8s-worker02"
   groups   = [ansible_group.k8s_workers.name]
   variables = {
-    ansible_host                 = var.vms["worker02"].ip
+    ansible_host                 = split("/", var.vms["worker02"].ip)[0]
     ansible_user                 = "ubuntu"
     ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
     ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"
   }
 }
-

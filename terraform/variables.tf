@@ -28,19 +28,11 @@ variable "network_info" {
   type = object({
     name = string
     address = string
-    ranges = object({
-      start = string
-      end = string
-    })
   })
 
   default     = {
-    name = "virbr01"
-    address = "192.168.100.0/24"
-    ranges = {
-      start = "192.168.100.100"
-      end = "192.168.100.102"
-    }
+    name = "br0"
+    address = "192.168.1.198/24"
   }
 }
 

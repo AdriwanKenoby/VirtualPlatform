@@ -7,25 +7,11 @@ resource "libvirt_network" "virbr" {
   autostart = true
   bridge   = {
     name = var.network_info.name
-    stp = "off"
   }  
   
   forward = {
-    mode = "route"
-    dev = "enp4s0"
+    mode = "bridge"
   }
-
-  ips = [{
-    address = cidrhost(var.network_info.address, 1)
-    netmask = cidrnetmask(var.network_info.address)
-    dhcp = {
-      ranges = [ {
-        start = var.network_info.ranges.start
-        end = var.network_info.ranges.end
-      } ]
-    }
-    family  = "ipv4"
-  }]
 }
 
 resource "libvirt_pool" "pool_storage" {
@@ -198,7 +184,7 @@ resource "libvirt_domain" "vms" {
           network = { network = libvirt_network.virbr.name }
         }
         wait_for_ip = {
-          source = "lease"
+          source = "agent"
           timeout = 60
         }
       }
@@ -247,7 +233,7 @@ resource "libvirt_domain" "vms" {
 data "libvirt_domain_interface_addresses" "ips_addresses" {
   for_each = var.vms
   domain = libvirt_domain.vms["${each.key}"].name
-  source = "lease"  # Utilise le serveur DHCP de libvirt
+  source = "agent"  # Utilise le serveur DHCP de libvirt
 
   depends_on = [libvirt_domain.vms]
 }
@@ -267,7 +253,7 @@ resource "ansible_host" "k8s" {
   name     = each.key
   groups   = [try(regex("worker", each.key), []) == "worker" ? ansible_group.k8s_workers.name : ansible_group.k8s_control_plane.name]
   variables = {
-    ansible_host                 = data.libvirt_domain_interface_addresses.ips_addresses["${each.key}"].interfaces[0].addrs[0].addr
+    ansible_host                 = data.libvirt_domain_interface_addresses.ips_addresses["${each.key}"].interfaces[1].addrs[0].addr
     ansible_user                 = "ubuntu"
     ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
     ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"

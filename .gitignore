@@ -5,3 +5,4 @@ terraform/terraform.tfstate.backup
 terraform/ubuntu-24.04-server-cloudimg-amd64.img
 terraform/lab.tfplan
 terraform/terraform.tfstate
+.vscode/

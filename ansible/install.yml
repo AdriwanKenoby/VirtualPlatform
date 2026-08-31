@@ -1,0 +1,13 @@
+---
+- name: Configure nodes
+  hosts: control-plane, workers
+  become: true
+
+  pre_tasks:
+
+  tasks:
+
+  roles:
+   - role: common
+
+  post_tasks:

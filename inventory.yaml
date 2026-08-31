@@ -1,4 +1,4 @@
 ---
 plugin: cloud.terraform.terraform_provider
 binary_path: /usr/bin/terraform
-project_path: ../terraform
+project_path: terraform

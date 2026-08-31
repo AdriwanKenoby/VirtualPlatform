@@ -251,7 +251,7 @@ resource "ansible_group" "k8s_workers" {
 resource "ansible_host" "k8s" {
   for_each = var.vms
   name     = each.key
-  groups   = [try(regex("worker", each.key), []) == "worker" ? ansible_group.k8s_workers.name : ansible_group.k8s_control_plane.name]
+  groups   = try(regex("worker", each.key), []) == "worker" ? [ansible_group.k8s_workers.name] : try(regex("control", each.key), []) == "control" ? [ansible_group.k8s_control_plane.name] : []
   variables = {
     ansible_host                 = data.libvirt_domain_interface_addresses.ips_addresses["${each.key}"].interfaces[1].addrs[0].addr
     ansible_user                 = "ubuntu"

@@ -30,33 +30,21 @@
         - { key: 'net.bridge.bridge-nf-call-iptables', value: 1 }
 
     - name: Get Kubernetes and CRI-O GPG keys
-      ansible.builtin.uri:
-        url: "{{ item }}"
-        return_content: true
-        method: GET
-        headers:
-          Accept: "application/json"
-      register: repository_keys_fingerprints
-      changed_when: false     
-      loop: 
-        - "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/Release.key"  
-        - "https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ cri_o_version }}/deb/Release.key"
+      ansible.builtin.get_url:
+        url: "{{ item.url }}Release.key"
+        dest: "{{ item.dest }}"
+        mode: '0644'
+      register: keyrings
+      loop:
+        - { url: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/" , dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc } 
+        - { url: "https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ cri_o_version }}/deb/", dest: /etc/apt/keyrings/cri-o-apt-keyring.asc }
 
-    - ansible.builtin.debug:
-        var: repository_keys_fingerprints
+    - name: Add deb repository CRI-O and Kubernetes with their GPG keys
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by={{ item.item.dest }}] {{ item.item.url }} /"
+        state: present
+      loop: "{{ keyrings.results }}"
 
-#    - name: Add deb repository CRI-O and Kubernetes with their GPG keys
-#      ansible.builtin.deb822_repository:
-#        name: k8s
-#        types: deb
-#        uris: "https://pkgs.k8s.io/"
-#        suites: 
-#          - core
-#        components: 
-#          - stable
-#        architectures: amd64
-#        signed_by: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/Release.key"
-     
   tasks:
   
   post_tasks:

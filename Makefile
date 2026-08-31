@@ -1,4 +1,4 @@
-.PHONY: all init plan apply conf
+.PHONY: init plan apply contrl-plane workers destroy
 
 init:
 	terraform -chdir=./terraform init
@@ -10,3 +10,5 @@ control-plane:
 	ansible-playbook -i inventory.yaml ansible/control-plane.yaml
 workers:
 	ansible-playbook -i inventory.yaml ansible/worker.yaml
+destroy:
+	terraform -chdir=./terraform destroy

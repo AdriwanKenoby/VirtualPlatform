@@ -19,7 +19,7 @@ pool_storage_info = {
 }
 
 vms = {
-  "control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32, ansible_groups = ["control"] }
-  "worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32, ansible_groups = ["worker"] }
-  "worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32, ansible_groups = ["worker"] }
+  "control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32, ansible_groups = ["controls"] }
+  "worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32, ansible_groups = ["workers"] }
+  "worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32, ansible_groups = ["workers"] }
 }

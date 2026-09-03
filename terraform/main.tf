@@ -66,7 +66,7 @@ resource "libvirt_cloudinit_disk" "init" {
 
   user_data = templatefile("${path.module}/cloud-init/user-data.yaml", {
     hostname   = "${each.key}"
-    public_key = trimspace(file(pathexpand(var.ssh_public_key_path)))
+    public_key = trimspace(file(pathexpand(var.ssh_key.public_key_path)))
   })
 
   # meta_data est OBLIGATOIRE en 0.9.x
@@ -251,11 +251,11 @@ resource "ansible_group" "k8s_workers" {
 resource "ansible_host" "k8s" {
   for_each = var.vms
   name     = each.key
-  groups   = try(regex("worker", each.key), []) == "worker" ? [ansible_group.k8s_workers.name] : try(regex("control", each.key), []) == "control" ? [ansible_group.k8s_control_plane.name] : []
+  groups   = each.value.ansible_groups
   variables = {
     ansible_host                 = data.libvirt_domain_interface_addresses.ips_addresses["${each.key}"].interfaces[1].addrs[0].addr
     ansible_user                 = "ubuntu"
-    ansible_ssh_private_key_file = pathexpand(var.ssh_private_key_path)
+    ansible_ssh_private_key_file = pathexpand(var.ssh_key.private_key_path)
     ansible_ssh_common_args      = "-o StrictHostKeyChecking=no"
   }
 }

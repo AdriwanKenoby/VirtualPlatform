@@ -11,16 +11,18 @@ variable "base_image" {
   }
 }
 
-variable "ssh_public_key_path" {
-  description = "Chemin vers la clé SSH publique"
-  type        = string
-  default     = "~/.ssh/id_ed25519.pub"
-}
 
-variable "ssh_private_key_path" {
-  description = "Chemin de la clé privée SSH"
-  type        = string
-  default     = "~/.ssh/id_ed25519"
+variable "ssh_key" {
+  description = "Chemin vers la clé SSH"
+  type        = object({
+    public_key_path  = string
+    private_key_path = string
+  })
+  
+  default     = {
+    public_key_path  = "~/.ssh/id_ed25519.pub",
+    private_key_path = "~/.ssh/id_ed25519"
+  }
 }
 
 variable "network_info" {
@@ -55,18 +57,12 @@ variable "vms" {
     memory = number
     vcpu   = number
     disk   = number
+    ansible_groups = list(string)
   }))
 
-  validation {
-    condition = alltrue(
-      [for vm in keys(var.vms): can(regex("worker", vm)) || can(regex("control", vm))]
-    )
-    error_message = "The name of the VM must contains either worker or control"
-  }
-
   default = {
-    "control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32 }
-    "worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32 }
-    "worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32 }
+    "control-plane-1" = { memory = 1024 * 4, vcpu = 2, disk = 32, ansible_groups = ["controls"] }
+    "worker01" = { memory = 1024 * 4, vcpu = 2, disk = 32, ansible_groups = ["workers"] }
+    "worker02" = { memory = 1024 * 4, vcpu = 2, disk = 32, ansible_groups = ["workers"] }
   }
 }

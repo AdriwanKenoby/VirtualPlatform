@@ -4,10 +4,11 @@
   become: true
 
   pre_tasks:
-
+    - name: Include common role
+      ansible.builtin.include_role:
+        name: ansible/k8s/roles/common
   tasks:
 
   roles:
-   - role: common
 
   post_tasks:

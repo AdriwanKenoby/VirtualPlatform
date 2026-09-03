@@ -240,12 +240,9 @@ data "libvirt_domain_interface_addresses" "ips_addresses" {
 
 ##--------------- Ansible -------------------
 
-resource "ansible_group" "k8s_control_plane" {
-  name = "control-plane"
-}
-
-resource "ansible_group" "k8s_workers" {
-  name = "workers"
+resource "ansible_group" "groups" {
+  for_each = toset(flatten([for vm in var.vms : vm.ansible_groups]))
+  name = each.key
 }
 
 resource "ansible_host" "k8s" {

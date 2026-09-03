@@ -1,6 +1,6 @@
 ---
 - name: Configure nodes
-  hosts: control-plane, workers
+  hosts: controls, workers
   become: true
 
   pre_tasks:
